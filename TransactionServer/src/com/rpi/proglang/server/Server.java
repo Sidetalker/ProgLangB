@@ -3,6 +3,8 @@ package com.rpi.proglang.server;
 import java.io.*;
 import java.lang.Thread.*;
 import java.util.HashSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 class constants {
     public static final int A = 0;
@@ -137,10 +139,11 @@ class Account {
 }
 
 // TO DO: Worker is currently an ordinary class.
-// You will need to movify it to make it a task,
+// You will need to modify it to make it a task,
 // so it can be given to an Executor thread pool.
 //
-class Worker {
+// Work class related to Thread
+class Worker extends Thread {
     private static final int A = constants.A;
     private static final int Z = constants.Z;
     private static final int numLetters = constants.numLetters;
@@ -210,9 +213,15 @@ class Worker {
                 else
                     throw new InvalidTransactionError();
             }
+
             try {
+                //lhs.verify(lhs.peek());
                 lhs.open(true);
-            } catch (TransactionAbortException e) {
+            }
+            catch (TransactionUsageError u) {
+                // parallel version [peek or verify]
+            }
+            catch (TransactionAbortException e) {
                 // won't happen in sequential version
             }
             lhs.update(rhs);
@@ -261,9 +270,18 @@ public class Server {
 // directly.  Don't modify the initialization of accounts above, or the
 // output at the end.
 
+        // Original
+        //while ((line = input.readLine()) != null) {
+        //    Worker w = new Worker(accounts, line);
+        //    w.run();
+        //}
+
+        // need either cached or fixed thread pool
+        ExecutorService threads = Executors.newCachedThreadPool();
+
         while ((line = input.readLine()) != null) {
             Worker w = new Worker(accounts, line);
-            w.run();
+            threads.execute(w);
         }
 
         System.out.println("final values:");
